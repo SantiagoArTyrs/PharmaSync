@@ -1,0 +1,6 @@
+# src/main/resources/application.yml
+
+# Define aquí el perfil por defecto. Solo esto.
+spring:
+  profiles:
+    active: dev

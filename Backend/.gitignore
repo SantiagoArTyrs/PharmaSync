@@ -31,3 +31,20 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Java/Maven
+target/
+*.class
+*.log
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Spring Boot config secrets
+*.env

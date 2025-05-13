@@ -22,4 +22,4 @@ logging:
     ROOT: INFO
 
 app:
-  name: PharmaZync
+  name: PharmaSync

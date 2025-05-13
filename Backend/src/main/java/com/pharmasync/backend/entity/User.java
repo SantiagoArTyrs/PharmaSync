@@ -3,6 +3,8 @@ package com.pharmasync.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
 @Table(name = "users")
 @Data
@@ -20,4 +22,6 @@ public class User {
 
     private String role; //USer ADMIN, etc
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<Prescription> prescriptions;
 }

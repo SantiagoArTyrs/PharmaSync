@@ -1,6 +1,5 @@
 package com.pharmasync.backend.entity;
 
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -39,4 +38,8 @@ public class Prescription {
             inverseJoinColumns = @JoinColumn(name = "drug_id")
     )
     private List<Drug> drugs;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 }

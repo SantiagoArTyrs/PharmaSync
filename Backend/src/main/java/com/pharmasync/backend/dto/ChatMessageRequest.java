@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 public class ChatMessageRequest {
     private String sessionId;
     private String sender;
-    private String text;
+    private String content;
 }

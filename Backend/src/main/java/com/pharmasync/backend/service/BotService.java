@@ -18,7 +18,7 @@ public class BotService {
      */
     public BotResponse askBot(String sessionId, String userMessage) {
         return n8nWebClient.post()
-                .uri("http://localhost:5678/webhook/pharma-agent")
+                .uri("http://localhost:5678/webhook-test/chat")
                 .bodyValue(Map.of(
                         "sessionId", sessionId,
                         "text", userMessage

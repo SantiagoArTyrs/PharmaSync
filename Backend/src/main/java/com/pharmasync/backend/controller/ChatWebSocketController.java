@@ -19,7 +19,7 @@ public class ChatWebSocketController {
         chatService.handleIncomingMessage(
                 message.getSessionId(),
                 message.getSender(),
-                message.getText()
+                message.getContent()
         );
         return "Mensaje recibido y procesado";
     }

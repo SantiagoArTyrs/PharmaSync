@@ -1,7 +1,3 @@
-# src/main/resources/application-dev.yml
-
-# Configuración **solo** para el perfil "dev"
-
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/pharma
@@ -16,6 +12,12 @@ spring:
   data:
     mongodb:
       uri: mongodb://localhost:27017/chatdb
+    redis:
+      host: localhost
+      port: 6379
+  n8n:
+    webhook:
+      url: http://localhost:5678/webhook/agent
 
 logging:
   level:

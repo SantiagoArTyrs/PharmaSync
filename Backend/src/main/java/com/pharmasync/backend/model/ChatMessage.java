@@ -25,4 +25,8 @@ public class ChatMessage implements MessageComponent {
     private String content;    // Contenido
     private Instant timestamp; // Momento del mensaje
 
+    @Override
+    public String getMessage() {
+        return this.content;
+    }
 }

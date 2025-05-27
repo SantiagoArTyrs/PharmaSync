@@ -1,74 +1,61 @@
 package com.pharmasync.backend.patterns.facade;
 
-import com.pharmasync.backend.dto.ChatMessageRequest;
-import com.pharmasync.backend.model.ChatMessage;
-import com.pharmasync.backend.patterns.decorator.MessageComponent;
-import com.pharmasync.backend.patterns.decorator.TimestampDecorator;
-import com.pharmasync.backend.patterns.adapter.AIResponseAdapter;
-import com.pharmasync.backend.service.ChatPersistenceService;
-import com.pharmasync.backend.service.RedisChatService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import com.pharmasync.backend.dto.ChatMessageResponse;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class ChatAgentFacade {
 
-    private final RedisChatService redisService;
-    private final AIResponseAdapter aiAdapter;
-    private final ChatPersistenceService persistenceService;
+    private final RestTemplate restTemplate = new RestTemplate();
 
-    private ChatMessage toChatMessage(MessageComponent msg) {
-        return ChatMessage.builder()
-                .sessionId(msg.getSessionId())
-                .sender(msg.getSender())
-                .content(msg.getContent())
-                .timestamp(msg.getTimestamp())
+    @Value("${agent.n8n.url}")
+    private String agentUrl;
+
+    public ChatMessageResponse sendMessageToAgent(String messageContent, String sessionId) {
+        // Crear el cuerpo de la solicitud para n8n
+        Map<String, Object> body = new HashMap<>();
+        body.put("content", messageContent);
+        body.put("sessionId", sessionId);
+
+        // Configurar headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        // Llamar al agente (n8n)
+        ResponseEntity<Map> response = restTemplate.exchange(
+                agentUrl,
+                HttpMethod.POST,
+                requestEntity,
+                Map.class
+        );
+
+        // Extraer la respuesta del bot
+        String output = (String) response.getBody().get("response");
+
+        // Generar ID y timestamp
+        String id = UUID.randomUUID().toString();
+        String timestamp = Instant.now().toString();
+
+        // Construir y devolver ChatMessageResponse
+        return ChatMessageResponse.builder()
+                .id(id)
+                .content(output)
+                .isUser(false)
+                .timestamp(timestamp)
+                .sessionId(sessionId)
                 .build();
-    }
-
-    public ChatMessage handleUserMessage(ChatMessageRequest request) {
-        // 1. Crear y decorar el mensaje del usuario
-        ChatMessage userMsg = ChatMessage.builder()
-                .sessionId(request.getSessionId())
-                .sender(request.getSender())
-                .content(request.getContent())
-                .build();
-
-        MessageComponent decoratedUser = new TimestampDecorator(userMsg);
-
-        // 2. Guardar en Redis
-        redisService.saveMessage(request.getSessionId(), toChatMessage(decoratedUser));
-
-        // 3. Recuperar historial para contexto
-        List<ChatMessage> history = redisService.getMessages(request.getSessionId());
-
-        // 4. Generar respuesta de IA (fuera de este facade: raw → adaptado)
-        String prompt = buildPromptFromHistory(history);
-        ChatMessage aiResponse = aiAdapter.adapt(prompt, request.getSessionId());
-
-        // 5. Decorar la respuesta (timestamp)
-        MessageComponent  decoratedResponse = new TimestampDecorator(aiResponse);
-
-        // 6. Guardar respuesta en Redis
-        redisService.saveMessage(request.getSessionId(), toChatMessage(decoratedResponse));
-
-        return toChatMessage(decoratedResponse);
-    }
-
-    public void closeSession(String sessionId) {
-        List<ChatMessage> history = redisService.getMessages(sessionId);
-        persistenceService.persistSession(sessionId, history);
-        redisService.deleteSession(sessionId);
-    }
-
-    private String buildPromptFromHistory(List<ChatMessage> history) {
-        StringBuilder sb = new StringBuilder();
-        for (ChatMessage msg : history) {
-            sb.append(msg.getSender()).append(": ").append(msg.getContent()).append("\n");
-        }
-        return sb.toString();
     }
 }

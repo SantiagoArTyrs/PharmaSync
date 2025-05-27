@@ -1,32 +1,14 @@
 package com.pharmasync.backend.patterns.decorator;
 
-import java.time.Instant;
-
 public abstract class ChatMessageDecorator implements MessageComponent {
+    protected MessageComponent component;
 
-    protected final MessageComponent wrapped;
-
-    public ChatMessageDecorator(MessageComponent wrapped) {
-        this.wrapped = wrapped;
+    public ChatMessageDecorator(MessageComponent component) {
+        this.component = component;
     }
 
     @Override
-    public String getSender() {
-        return wrapped.getSender();
-    }
-
-    @Override
-    public String getContent() {
-        return wrapped.getContent();
-    }
-
-    @Override
-    public Instant getTimestamp() {
-        return wrapped.getTimestamp();
-    }
-
-    @Override
-    public String getSessionId() {
-        return wrapped.getSessionId();
+    public String getMessage() {
+        return component.getMessage();
     }
 }

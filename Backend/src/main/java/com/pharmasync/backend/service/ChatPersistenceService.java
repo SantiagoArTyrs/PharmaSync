@@ -20,10 +20,11 @@ public class ChatPersistenceService {
     private final ChatSessionRepository chatSessionRepository;
     private final ClinicalFactRepository clinicalFactRepository;
 
-    public void persistSession(String sessionId, List<ChatMessage> history) {
+    public void persistSession(String sessionId, List<ChatMessage> history, String userId) {
         // 1. Guardar historial completo en Mongo
         ChatSession session = ChatSession.builder()
                 .sessionId(sessionId)
+                .userId(userId)
                 .messages(history)
                 .build();
         chatSessionRepository.save(session);

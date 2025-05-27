@@ -1,58 +1,75 @@
 package com.pharmasync.backend.service;
 
+import com.pharmasync.backend.dto.ChatMessageDTO;
+import com.pharmasync.backend.dto.ChatMessageResponse;
 import com.pharmasync.backend.model.ChatMessage;
-import com.pharmasync.backend.patterns.adapter.AIResponseAdapter;
+import com.pharmasync.backend.patterns.decorator.MessageComponent;
+import com.pharmasync.backend.patterns.decorator.TypeDecorator;
+import com.pharmasync.backend.patterns.decorator.TimestampDecorator;
+import com.pharmasync.backend.patterns.facade.ChatAgentFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ChatService {
 
-    private final RedisChatService redisChatService;
-    private final OpenAIClient openAIClient;
-    private final AIResponseAdapter adapter;
+    private final ChatAgentFacade chatAgentFacade;
+    private final ChatPersistenceService chatPersistenceService;
 
-    public ChatMessage handleIncomingMessage(String sessionId, String sender, String text) {
+        public List<ChatMessageResponse> processMessage(ChatMessageDTO messageDTO, String userId) {
+        String userMessage = messageDTO.getContent();
+        String sessionId = messageDTO.getSessionId();
 
-        // 1. Crear mensaje del usuario
-        ChatMessage userMessage = ChatMessage.builder()
+        // Crear mensaje del usuario
+        ChatMessage user = ChatMessage.builder()
+                .id(UUID.randomUUID().toString())
                 .sessionId(sessionId)
-                .sender(sender)
-                .content(text)
+                .sender("user")
+                .content(userMessage)
                 .timestamp(Instant.now())
                 .build();
 
-        // 2. Guardar en Redis
-        redisChatService.saveMessage(sessionId, userMessage);
+        // Obtener respuesta del bot
+        String rawBotMessage = chatAgentFacade.sendMessageToAgent(userMessage, sessionId).getContent();
 
-        // 3. Recuperar historial para generar contexto
-        List<ChatMessage> history = redisChatService.getMessages(sessionId);
-        String prompt = buildPrompt(history);
+        // Decorar
+        MessageComponent decorated = new TypeDecorator(new TimestampDecorator(() -> rawBotMessage));
+        String finalBotMessage = decorated.getMessage();
 
-        // 4. Llamar a n8n
-        String rawResponse = openAIClient.call(prompt, sessionId);
+        // Crear mensaje del bot
+        ChatMessage bot = ChatMessage.builder()
+                .id(UUID.randomUUID().toString())
+                .sessionId(sessionId)
+                .sender("bot")
+                .content(finalBotMessage)
+                .timestamp(Instant.now())
+                .build();
 
-        // 5. Adaptar la respuesta
-        ChatMessage botResponse = adapter.adapt(rawResponse, sessionId);
+        // Guardar ambos
+        chatPersistenceService.persistSession(sessionId, List.of(user, bot), userId);
 
-        // 6. Guardar respuesta también en Redis
-        redisChatService.saveMessage(sessionId, botResponse);
+        // Devolver ambos
+        return List.of(
+                ChatMessageResponse.builder()
+                        .id(user.getId())
+                        .content(user.getContent())
+                        .isUser(true)
+                        .timestamp(user.getTimestamp().toString())
+                        .sessionId(sessionId)
+                        .build(),
 
-        return botResponse;
-    }
-
-    private String buildPrompt(List<ChatMessage> history) {
-        StringBuilder sb = new StringBuilder();
-        for (ChatMessage message : history) {
-            sb.append(message.getSender())
-                    .append(": ")
-                    .append(message.getContent())
-                    .append("\n");
+                ChatMessageResponse.builder()
+                        .id(bot.getId())
+                        .content(bot.getContent())
+                        .isUser(false)
+                        .timestamp(bot.getTimestamp().toString())
+                        .sessionId(sessionId)
+                        .build()
+        );
         }
-        return sb.toString();
-    }
 }

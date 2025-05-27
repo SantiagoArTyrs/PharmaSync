@@ -1,18 +1,14 @@
 package com.pharmasync.backend.patterns.decorator;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 public class TimestampDecorator extends ChatMessageDecorator {
-
-    private final Instant timestamp;
-
-    public TimestampDecorator(MessageComponent wrapped) {
-        super(wrapped);
-        this.timestamp = (wrapped.getTimestamp() != null) ? wrapped.getTimestamp() : Instant.now();
+    public TimestampDecorator(MessageComponent component) {
+        super(component);
     }
 
     @Override
-    public Instant getTimestamp() {
-        return timestamp;
+    public String getMessage() {
+        return component.getMessage() + "\n\n🕒 " + LocalDateTime.now();
     }
 }

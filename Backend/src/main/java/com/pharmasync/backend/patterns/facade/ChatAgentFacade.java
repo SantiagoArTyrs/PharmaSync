@@ -1,7 +1,8 @@
 package com.pharmasync.backend.patterns.facade;
 
 import com.pharmasync.backend.dto.ChatMessageResponse;
-
+import com.pharmasync.backend.patterns.strategy.SummaryDetectionStrategy;
+import com.pharmasync.backend.service.ClinicalSummaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -19,22 +20,24 @@ public class ChatAgentFacade {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    private final ClinicalSummaryService clinicalSummaryService;
+    private final SummaryDetectionStrategy summaryStrategy;
+
     @Value("${agent.n8n.url}")
     private String agentUrl;
 
-    public ChatMessageResponse sendMessageToAgent(String messageContent, String sessionId) {
-        // Crear el cuerpo de la solicitud para n8n
+    // Nuevo: ahora recibimos también el userId
+    public ChatMessageResponse sendMessageToAgent(String userId, String messageContent, String sessionId) {
+        // 1. Preparar la solicitud para n8n
         Map<String, Object> body = new HashMap<>();
         body.put("content", messageContent);
         body.put("sessionId", sessionId);
 
-        // Configurar headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-        // Llamar al agente (n8n)
+        // 2. Llamar al agente (n8n)
         ResponseEntity<Map> response = restTemplate.exchange(
                 agentUrl,
                 HttpMethod.POST,
@@ -42,14 +45,20 @@ public class ChatAgentFacade {
                 Map.class
         );
 
-        // Extraer la respuesta del bot
+        // 3. Obtener respuesta del bot
         String output = (String) response.getBody().get("response");
 
-        // Generar ID y timestamp
+        // 4. Generar ID y timestamp
         String id = UUID.randomUUID().toString();
         String timestamp = Instant.now().toString();
 
-        // Construir y devolver ChatMessageResponse
+        // 5. Guardar resumen clínico si aplica
+        if (summaryStrategy.isRelevant(messageContent)) {
+            String type = summaryStrategy.detectType(messageContent);
+            clinicalSummaryService.saveSummary(userId, sessionId, messageContent, output, type);
+        }
+
+        // 6. Devolver respuesta al frontend
         return ChatMessageResponse.builder()
                 .id(id)
                 .content(output)

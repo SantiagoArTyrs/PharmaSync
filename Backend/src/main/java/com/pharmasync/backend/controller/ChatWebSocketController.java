@@ -19,8 +19,10 @@ public class ChatWebSocketController {
     @SendTo("/topic/messages")
     public ChatMessageResponse receiveMessage(@Payload ChatMessageRequest message) {
         return chatAgentFacade.sendMessageToAgent(
-            message.getContent(),
-            message.getSessionId()
+                message.getUserId(),           // <- nuevo
+                message.getContent(),
+                message.getSessionId()
         );
     }
 }
+

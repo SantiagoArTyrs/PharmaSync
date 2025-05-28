@@ -24,8 +24,8 @@ public class ChatController {
 
     @PostMapping("/send")
     public ResponseEntity<List<ChatMessageResponse>> sendMessage(
-        @RequestBody ChatMessageRequest request,
-        @AuthenticationPrincipal User user
+            @RequestBody ChatMessageRequest request,
+            @AuthenticationPrincipal User user
     ) {
         ChatMessageDTO dto = ChatMessageDTO.builder()
                 .content(request.getContent())
@@ -33,7 +33,6 @@ public class ChatController {
                 .sender(request.getSender())
                 .build();
 
-        // Aquí necesitas pasar el ID
         return ResponseEntity.ok(chatService.processMessage(dto, String.valueOf(user.getId())));
     }
 

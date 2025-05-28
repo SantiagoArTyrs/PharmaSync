@@ -35,9 +35,10 @@ public class ChatService {
                 .build();
 
         // Obtener respuesta del bot
-        String rawBotMessage = chatAgentFacade.sendMessageToAgent(userMessage, sessionId).getContent();
+            String rawBotMessage = chatAgentFacade.sendMessageToAgent(userId, userMessage, sessionId).getContent();
 
-        // Decorar
+
+            // Decorar
         MessageComponent decorated = new TypeDecorator(new TimestampDecorator(() -> rawBotMessage));
         String finalBotMessage = decorated.getMessage();
 

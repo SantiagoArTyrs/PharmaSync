@@ -1,51 +1,82 @@
-import React, { useState } from 'react';
-import './index.css';
-import Navbar from './components/Navbar';
-import SearchBar from './components/SearchBar';
-import InteractionGrid from './components/InteractionGrid';
-import ChatPanel from './components/ChatPanel';
-import { Interaction } from './components/InteractionCard';
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
+import { AuthProvider } from "./contexts/AuthContext"
+import { PrivateRoute } from "./components/auth/PrivateRoute"
+import { Navbar } from "./components/layout/Navbar"
+import { Login } from "./pages/Login"
+import { Register } from "./pages/Register"
+import { Chat } from "./pages/Chat"
+import { Users } from "./pages/Users"
+import { Profile } from "./pages/Profile"
+import { ClinicalSummary } from "./pages/ClinicalSummary"
+import { AdminUsers } from "./pages/AdminUsers"
+import { AdminRegister } from "./pages/AdminRegister"
 
-const sampleData: Interaction[] = [
-  { id: '1', drugs: 'Aspirina e Ibuprofeno', description: 'Puede aumentar riesgo de sangrado gastrointestinal.' },
-  { id: '2', drugs: 'Lisinopril y Atorvastatina', description: 'No se reportan interacciones significativas.' },
-  { id: '3', drugs: 'Metformina y Simvastatina', description: 'Riesgo leve de hipoglucemia.' },
-];
-
-const App: React.FC = () => {
-  const [query, setQuery] = useState('');
-  const filtered = sampleData.filter(item =>
-    item.drugs.toLowerCase().includes(query.toLowerCase())
-  );
-
+function App() {
   return (
-    <div className="h-screen flex flex-col bg-gray-100 text-gray-800 font-sans">
-      {/* Navbar */}
-      <Navbar />
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <main className="pt-16">
+            <Routes>
+              <Route path="/" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
-      {/* Body layout */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Contenido principal */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-6xl mx-auto space-y-8">
-            {/* Search */}
-            <SearchBar value={query} onChange={setQuery} />
+              <Route
+                path="/chat"
+                element={
+                  <PrivateRoute>
+                    <Chat />
+                  </PrivateRoute>
+                }
+              />
 
-            {/* Título */}
-            <h2 className="text-2xl font-semibold">Interacciones recientes</h2>
+              <Route
+                path="/profile"
+                element={
+                  <PrivateRoute>
+                    <Profile />
+                  </PrivateRoute>
+                }
+              />
 
-            {/* Grid de tarjetas */}
-            <InteractionGrid items={filtered} />
-          </div>
-        </main>
+              <Route
+                path="/summary"
+                element={
+                  <PrivateRoute>
+                    <ClinicalSummary />
+                  </PrivateRoute>
+                }
+              />
 
-        {/* Chat lateral derecho */}
-        <aside className="w-80 bg-white border-l border-gray-200 shadow-lg flex flex-col">
-          <ChatPanel />
-        </aside>
-      </div>
-    </div>
-  );
-};
+              <Route
+                path="/users"
+                element={
+                  <PrivateRoute adminOnly>
+                    <Users />
+                  </PrivateRoute>
+                }
+              />
 
-export default App;
+              <Route
+                path="/admin/users"
+                element={
+                  <PrivateRoute adminOnly>
+                    <AdminUsers />
+                  </PrivateRoute>
+                }
+              />
+
+              {/* Admin registration route - not linked in UI */}
+              <Route path="/register-admin" element={<AdminRegister />} />
+
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+        </div>
+      </Router>
+    </AuthProvider>
+  )
+}
+
+export default App

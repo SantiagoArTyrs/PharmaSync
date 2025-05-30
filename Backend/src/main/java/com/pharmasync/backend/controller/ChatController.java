@@ -1,41 +1,39 @@
 package com.pharmasync.backend.controller;
 
+import com.pharmasync.backend.dto.ChatMessageDTO;
+import com.pharmasync.backend.dto.ChatMessageRequest;
+import com.pharmasync.backend.dto.ChatMessageResponse;
+import com.pharmasync.backend.entity.User;
+import com.pharmasync.backend.patterns.facade.ChatAgentFacade;
 import com.pharmasync.backend.service.ChatService;
-import com.pharmasync.backend.model.ChatMessage;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
-@RequestMapping("/api/chat")
+@RequestMapping("/api/user/chat")
 @RequiredArgsConstructor
 public class ChatController {
 
     private final ChatService chatService;
 
-    /**
-     * Endpoint para enviar un mensaje y recibir la respuesta del bot.
-     * @param sessionId ID de la sesión de chat.
-     * @param sender Quien envía el mensaje (usuario o bot).
-     * @param text Texto del mensaje.
-     */
     @PostMapping("/send")
-    @ResponseStatus(HttpStatus.CREATED)
-    public void sendMessage(@RequestParam String sessionId,
-                            @RequestParam String sender,
-                            @RequestParam String text) {
-        chatService.handleIncomingMessage(sessionId, sender, text);
+    public ResponseEntity<List<ChatMessageResponse>> sendMessage(
+            @RequestBody ChatMessageRequest request,
+            @AuthenticationPrincipal User user
+    ) {
+        ChatMessageDTO dto = ChatMessageDTO.builder()
+                .content(request.getContent())
+                .sessionId(request.getSessionId())
+                .sender(request.getSender())
+                .build();
+
+        return ResponseEntity.ok(chatService.processMessage(dto, String.valueOf(user.getId())));
     }
 
-    /**
-     * Endpoint para obtener la conversación completa de una sesión.
-     * @param sessionId ID de la sesión de chat.
-     * @return Lista de mensajes de la sesión.
-     */
-    @GetMapping("/messages/{sessionId}")
-    public List<ChatMessage> getMessages(@PathVariable String sessionId) {
-        return chatService.getMessagesForSession(sessionId);
-    }
 }

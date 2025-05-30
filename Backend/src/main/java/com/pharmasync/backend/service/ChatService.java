@@ -1,52 +1,93 @@
 package com.pharmasync.backend.service;
 
-import com.pharmasync.backend.dto.BotResponse;
+import com.pharmasync.backend.dto.ChatMessageDTO;
+import com.pharmasync.backend.dto.ChatMessageResponse;
 import com.pharmasync.backend.model.ChatMessage;
-import com.pharmasync.backend.model.ChatSession;
-import com.pharmasync.backend.repository.ChatMessageRepository;
-import com.pharmasync.backend.repository.ChatSessionRepository;
+import com.pharmasync.backend.patterns.decorator.MessageComponent;
+import com.pharmasync.backend.patterns.decorator.MessageDecoratorBuilder;
+import com.pharmasync.backend.patterns.facade.ChatAgentFacade;
+import com.pharmasync.backend.patterns.observer.ChatEventListener;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.HashSet;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ChatService {
 
-    private final ChatMessageRepository messageRepo;
-    private final ChatSessionRepository sessionRepo;
-    private final BotService botService;
+    private final ChatAgentFacade chatAgentFacade;
+    private final ChatPersistenceService chatPersistenceService;
 
-    public List<ChatMessage> getMessagesForSession(String sessionId) {
-        return messageRepo.findBySessionIdOrderByTimestampAsc(sessionId);
-    }
+    @Getter
+    private final List<ChatEventListener> listeners = new ArrayList<>();
 
-    public void handleIncomingMessage(String sessionId, String sender, String text) {
-        // 1. Guardar mensaje del usuario
-        ChatMessage userMsg = new ChatMessage(null, sessionId, sender, text, Instant.now());
-        messageRepo.save(userMsg);
+    public List<ChatMessageResponse> processMessage(ChatMessageDTO messageDTO, String userId) {
+        String userMessage = messageDTO.getContent();
+        String sessionId = messageDTO.getSessionId();
 
-        // 2. Consultar bot
-        BotResponse botReply = botService.askBot(sessionId, text);
+        ChatMessage user = ChatMessage.builder()
+                .id(UUID.randomUUID().toString())
+                .sessionId(sessionId)
+                .sender("user")
+                .content(userMessage)
+                .timestamp(Instant.now())
+                .build();
 
-        // 3. Guardar respuesta del bot
-        ChatMessage botMsg = new ChatMessage(null, sessionId, "bot", botReply.getReplyText(), Instant.now());
-        messageRepo.save(botMsg);
+        long startTime = System.currentTimeMillis();
 
-        // 4. Guardar alergias detectadas en la sesión
-        if (!botReply.getExtractedAllergies().isEmpty()) {
-            ChatSession session = sessionRepo.findById(sessionId)
-                    .orElseGet(() -> new ChatSession(sessionId, new HashSet<>()));
+        String rawBotMessage = chatAgentFacade.sendMessageToAgent(userId, userMessage, sessionId).getContent();
 
-            Set<String> updatedAllergies = new HashSet<>(session.getAllergies());
-            updatedAllergies.addAll(botReply.getExtractedAllergies());
-            session.setAllergies(updatedAllergies);
+        long duration = System.currentTimeMillis() - startTime;
 
-            sessionRepo.save(session);
+        boolean isError = (rawBotMessage == null || rawBotMessage.isEmpty());
+
+        MessageComponent baseMessage = () -> rawBotMessage != null ? rawBotMessage : "";
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy");
+        MessageComponent decorated = new MessageDecoratorBuilder(baseMessage)
+                .addSanitizer()
+                .addType("🤖 PharmaSync Bot:")
+                .addTimestamp(formatter)
+                .build();
+
+        String finalBotMessage = decorated.getMessage();
+
+        ChatMessage bot = ChatMessage.builder()
+                .id(UUID.randomUUID().toString())
+                .sessionId(sessionId)
+                .sender("bot")
+                .content(finalBotMessage)
+                .timestamp(Instant.now())
+                .build();
+
+        chatPersistenceService.persistSession(sessionId, List.of(user, bot), userId);
+
+        for (ChatEventListener listener : listeners) {
+            listener.onMessageProcessed(sessionId, userId, userMessage, duration, isError);
         }
+
+        return List.of(
+                ChatMessageResponse.builder()
+                        .id(user.getId())
+                        .content(user.getContent())
+                        .isUser(true)
+                        .timestamp(user.getTimestamp().toString())
+                        .sessionId(sessionId)
+                        .build(),
+
+                ChatMessageResponse.builder()
+                        .id(bot.getId())
+                        .content(bot.getContent())
+                        .isUser(false)
+                        .timestamp(bot.getTimestamp().toString())
+                        .sessionId(sessionId)
+                        .build()
+        );
     }
 }

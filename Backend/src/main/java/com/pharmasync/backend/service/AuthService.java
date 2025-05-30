@@ -1,11 +1,10 @@
 package com.pharmasync.backend.service;
 
-
-import com.pharmasync.backend.config.JwtUtils;
 import com.pharmasync.backend.dto.AuthRequest;
 import com.pharmasync.backend.dto.AuthResponse;
 import com.pharmasync.backend.entity.User;
 import com.pharmasync.backend.repository.UserRepository;
+import com.pharmasync.backend.config.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,30 +17,14 @@ public class AuthService {
     private final JwtUtils jwtUtils;
     private final PasswordEncoder passwordEncoder;
 
-    public AuthResponse register(AuthRequest request){
-        if (userRepository.existsByUsername(request.getUsername())){
-            throw new RuntimeException("Username already taken");
+    public AuthResponse login(AuthRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Correo no registrado"));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new RuntimeException("Contraseña inválida");
         }
 
-        User user = User.builder()
-                .username(request.getUsername())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role("USER")
-                .build();
-
-        userRepository.save(user);
-
-        return new AuthResponse(jwtUtils.generateToken(user.getUsername()));
-    }
-
-    public AuthResponse login (AuthRequest  request){
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())){
-            throw new RuntimeException("Invalid password");
-        }
-
-        return new AuthResponse(jwtUtils.generateToken(user.getUsername()));
+        return new AuthResponse(user, jwtUtils.generateToken(user));
     }
 }

@@ -1,15 +1,19 @@
 package com.pharmasync.backend.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatMessageRequest {
-    private String userId;
-    private String sessionId;
-    private String sender;
+@Builder
+public class ChatMessageResponse {
+
+    private String id;
     private String content;
+    private boolean isUser;
+    private String timestamp;
+    private String sessionId;
 }

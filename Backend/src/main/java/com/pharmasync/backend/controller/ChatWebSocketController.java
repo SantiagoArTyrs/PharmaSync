@@ -1,27 +1,28 @@
 package com.pharmasync.backend.controller;
 
 import com.pharmasync.backend.dto.ChatMessageRequest;
-import com.pharmasync.backend.service.ChatService;
+import com.pharmasync.backend.dto.ChatMessageResponse;
+import com.pharmasync.backend.patterns.facade.ChatAgentFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.annotation.SendToUser;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
 
 @Controller
 @RequiredArgsConstructor
 public class ChatWebSocketController {
 
-    private final ChatService chatService;
+    private final ChatAgentFacade chatAgentFacade;
 
     @MessageMapping("/chat")
-    public String receiveMessage(@Payload ChatMessageRequest message){
-        chatService.handleIncomingMessage(
-                message.getSessionId(),
-                message.getSender(),
-                message.getText()
+    @SendTo("/topic/messages")
+    public ChatMessageResponse receiveMessage(@Payload ChatMessageRequest message) {
+        return chatAgentFacade.sendMessageToAgent(
+                message.getUserId(),           // <- nuevo
+                message.getContent(),
+                message.getSessionId()
         );
-        return "Mensaje recibido y procesado";
     }
-
 }
+

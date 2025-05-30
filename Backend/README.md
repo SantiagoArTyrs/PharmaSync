@@ -154,6 +154,9 @@ En la raíz del proyecto se encuentra un archivo `docker-compose.yml` que define
 ```bash
 docker-compose up -d
 ```
+## Uso de n8n
+Si quieres correr n8n de forma local, debes importar el archivo JSON llamado Workflow_Para_N8N desde la interfaz web de n8n para cargar los flujos de trabajo configurados para PharmaSync.
+
 ---
 
 ## ✅ Ejemplo de flujo de chat clínico

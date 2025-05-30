@@ -21,7 +21,6 @@ public class AdminController {
     private final UserRepository userRepository;
     private final ChatSessionRepository chatSessionRepository;
     private final ClinicalSummaryRepository clinicalSummaryRepository;
-    private final ClinicalFactRepository clinicalFactRepository;
 
     @GetMapping("/users")
     public ResponseEntity<List<User>> getAllUsers() {
@@ -39,6 +38,8 @@ public class AdminController {
 
         // Borrar sesiones (y mensajes embebidos)
         chatSessionRepository.deleteByUserId(userId);
+
+        clinicalSummaryRepository.deleteByUserId(userId);
 
         // Borrar usuario (PostgreSQL)
         userRepository.deleteById(id);

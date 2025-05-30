@@ -56,6 +56,7 @@ src/
 |--------|----------------|--------------------------------|
 | POST   | /auth/login    | Login y obtención de JWT       |
 | POST   | /auth/register | Registro de nuevos usuarios    |
+| POST   | /auth/register-admin | Registro secreto de un admin    |
 
 ### Administración (/api/admin)
 
@@ -123,6 +124,36 @@ mvn spring-boot:run
 - Roles y permisos configurados en Spring Security.
 - Filtros para proteger endpoints y controlar accesos.
 
+---
+## 🐳 Requisitos y despliegue local con Docker
+
+Para facilitar la ejecución local del backend y sus dependencias, PharmaSync utiliza contenedores Docker para PostgreSQL, MongoDB y el orquestador n8n.
+
+### Requisitos previos
+
+- Tener instalado [Docker](https://docs.docker.com/get-docker/) y [Docker Compose](https://docs.docker.com/compose/install/) en tu máquina local.
+
+---
+
+### Levantar servicios con Docker Compose
+
+En la raíz del proyecto se encuentra un archivo `docker-compose.yml` que define los siguientes servicios:
+
+- **PostgreSQL 15** para la base relacional (usuarios, clinical_fact).  
+- **MongoDB 6** para almacenamiento de chats, sesiones y clinical summaries.  
+- **n8n** como orquestador de flujos.
+
+---
+
+### Comandos para ejecutar localmente
+
+1. Abre una terminal en la carpeta raíz del proyecto donde está el `docker-compose.yml`.  
+
+2. Ejecuta para levantar los contenedores en segundo plano:
+
+```bash
+docker-compose up -d
+```
 ---
 
 ## ✅ Ejemplo de flujo de chat clínico

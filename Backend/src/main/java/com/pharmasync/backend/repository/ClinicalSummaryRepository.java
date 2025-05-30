@@ -13,4 +13,5 @@ public interface ClinicalSummaryRepository extends MongoRepository<ClinicalSumma
     List<ClinicalSummary> findBySessionId(String sessionId);
 
     List<ClinicalSummary> findByType(String type);
+    void deleteByUserId(String userId);
 }

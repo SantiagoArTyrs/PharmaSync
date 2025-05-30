@@ -1,6 +1,10 @@
 package com.pharmasync.backend.controller;
 
+import com.pharmasync.backend.entity.ClinicalFact;
 import com.pharmasync.backend.entity.User;
+import com.pharmasync.backend.repository.ChatSessionRepository;
+import com.pharmasync.backend.repository.ClinicalFactRepository;
+import com.pharmasync.backend.repository.ClinicalSummaryRepository;
 import com.pharmasync.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +19,9 @@ import java.util.Optional;
 public class AdminController {
 
     private final UserRepository userRepository;
+    private final ChatSessionRepository chatSessionRepository;
+    private final ClinicalSummaryRepository clinicalSummaryRepository;
+    private final ClinicalFactRepository clinicalFactRepository;
 
     @GetMapping("/users")
     public ResponseEntity<List<User>> getAllUsers() {
@@ -24,11 +31,19 @@ public class AdminController {
     @DeleteMapping("/users/{id}")
     public ResponseEntity<String> deleteUser(@PathVariable Long id) {
         Optional<User> userOpt = userRepository.findById(id);
-        if (userOpt.isPresent()) {
-            userRepository.deleteById(id);
-            return ResponseEntity.ok("Usuario eliminado con éxito.");
-        } else {
+        if (userOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
+
+        String userId = String.valueOf(id); // si usas String para userId en MongoDB, ajusta
+
+        // Borrar sesiones (y mensajes embebidos)
+        chatSessionRepository.deleteByUserId(userId);
+
+        // Borrar usuario (PostgreSQL)
+        userRepository.deleteById(id);
+
+        return ResponseEntity.ok("Usuario y datos relacionados eliminados correctamente.");
     }
+
 }

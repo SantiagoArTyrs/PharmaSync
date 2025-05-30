@@ -1,12 +1,19 @@
 package com.pharmasync.backend.patterns.decorator;
 
 public class TypeDecorator extends ChatMessageDecorator {
-    public TypeDecorator(MessageComponent component) {
+    private final String prefix;
+
+    public TypeDecorator(MessageComponent component, String prefix) {
         super(component);
+        this.prefix = prefix;
+    }
+
+    public TypeDecorator(MessageComponent component) {
+        this(component, "🤖 Bot:");
     }
 
     @Override
     public String getMessage() {
-        return "🤖 Bot:\n" + component.getMessage();
+        return prefix + "\n" + component.getMessage();
     }
 }

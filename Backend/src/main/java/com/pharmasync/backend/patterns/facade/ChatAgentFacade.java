@@ -55,7 +55,7 @@ public class ChatAgentFacade {
         System.out.println("Es relevante?: " + strategy.isRelevant(messageContent));
         System.out.println("Respuesta procesada: " + processedAnswer);
 
-        if (strategy.isRelevant(messageContent)) {
+        if (strategy.isRelevant(messageContent) && !"none".equals(strategy.getType())) {
             String type = strategy.getType();
 
             ClinicalSummary summary = clinicalSummaryAdapter.adapt(rawResponse, userId, sessionId, messageContent);

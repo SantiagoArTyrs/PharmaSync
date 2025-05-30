@@ -7,4 +7,5 @@ public interface SummaryDetectionStrategy {
     default String processAnswer(String rawAnswer) {
         return rawAnswer;
     }
+
 }

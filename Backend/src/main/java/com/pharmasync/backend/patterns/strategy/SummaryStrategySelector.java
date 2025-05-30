@@ -15,6 +15,31 @@ public class SummaryStrategySelector {
         return strategies.stream()
                 .filter(strategy -> strategy.isRelevant(message))
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("No strategy found"));
+                .orElseGet(this::getDefaultStrategy);
+    }
+
+    private SummaryDetectionStrategy getDefaultStrategy() {
+        return new SummaryDetectionStrategy() {
+            @Override
+            public boolean isRelevant(String message) {
+                return true; // Siempre relevante para fallback
+            }
+
+            @Override
+            public boolean matches(String message) {
+                return false; // No coincide con ningún patrón específico
+            }
+
+            @Override
+            public String getType() {
+                return "none"; // Tipo indicativo de no estrategia
+            }
+
+            @Override
+            public String processAnswer(String rawAnswer) {
+                // No hace nada, devuelve el texto sin cambios
+                return rawAnswer;
+            }
+        };
     }
 }

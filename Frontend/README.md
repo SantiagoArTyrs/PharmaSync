@@ -14,7 +14,7 @@ PharmaSync es una plataforma avanzada de asistencia farmacéutica que utiliza in
 - **TypeScript**: Para tipado estático y mejor mantenimiento del código.
 - **React Router DOM**: Manejo de rutas, incluyendo rutas protegidas y basadas en roles.
 - **JWT (JSON Web Tokens)**: Autenticación y autorización segura con tokens almacenados en localStorage.
-- **Axios / Fetch API**: Para comunicación con el backend REST.
+- **Axios**: Para comunicación con el backend REST.
 - **Estructuras de Datos Personalizadas**: Implementación de listas doblemente enlazadas para navegación entre sesiones de chat.
 
 ---
@@ -86,44 +86,31 @@ PharmaSync es una plataforma avanzada de asistencia farmacéutica que utiliza in
 ### Requisitos Previos
 
 - Node.js >= 16
-- npm o yarn
+- npm
 - Backend corriendo y accesible (asegúrate que la API REST esté funcionando)
 
 ### Pasos para ejecutar
 
 ```bash
 # Clonar repositorio y entrar en carpeta
-git clone <url-del-repo>
-cd frontend
+git clone https://github.com/SantiagoArTyrs/PharmaSync
+cd Frontend
 
 # Instalar dependencias
 npm install
-# o
-yarn install
 
 # Iniciar servidor de desarrollo
 npm run dev
-# o
-yarn dev
 ```
 
-La aplicación quedará disponible típicamente en http://localhost:3000 o el puerto configurado por Vite.
-
----
-
-## Comandos Útiles
-
-- `npm run dev` — Inicia el servidor en modo desarrollo con hot reload.
-- `npm run build` — Construye el proyecto para producción.
-- `npm run preview` — Sirve la versión de producción localmente.
-- `npm run lint` — Ejecuta el linter para verificar estilo y errores.
+La aplicación quedará disponible típicamente en http://localhost:3000.
 
 ---
 
 ## Integración con Backend
 
 - Las URLs y configuración base del backend están en `/src/lib/api.ts`.
-- Todas las llamadas HTTP usan Axios o Fetch con manejo centralizado de tokens JWT para autorización.
+- Todas las llamadas HTTP usan Axios con manejo centralizado de tokens JWT para autorización.
 - La autenticación se valida en el contexto global para controlar acceso a rutas y componentes.
 
 ---
@@ -150,11 +137,5 @@ La aplicación quedará disponible típicamente en http://localhost:3000 o el pu
 - Controlar el acceso a rutas sensibles en frontend para evitar accesos indebidos.
 - Modularizar componentes para mantener la escalabilidad.
 - Aprovechar el poder de Tailwind para estilos consistentes sin CSS personalizado extensivo.
-
----
-
-## Contacto y Contribución
-
-Para dudas o contribuciones, por favor contactar con el equipo de desarrollo o crear un issue en el repositorio.
 
 ---

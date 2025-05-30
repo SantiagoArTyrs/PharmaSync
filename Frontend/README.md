@@ -1,54 +1,141 @@
-# React + TypeScript + Vite
+# PharmaSync Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Descripción General
 
-Currently, two official plugins are available:
+PharmaSync es una plataforma avanzada de asistencia farmacéutica que utiliza inteligencia artificial para responder consultas médicas y farmacológicas. Este repositorio contiene el frontend de la aplicación, desarrollado con **React**, **Vite** y **Tailwind CSS**, diseñado para interactuar con un backend REST que maneja autenticación, sesiones de chat y gestión de usuarios.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## Tecnologías Usadas
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **React 18+**: Librería principal para construcción de la interfaz.
+- **Vite**: Herramienta moderna para desarrollo y bundling.
+- **Tailwind CSS**: Framework CSS para estilos utilitarios y responsivos.
+- **TypeScript**: Para tipado estático y mejor mantenimiento del código.
+- **React Router DOM**: Manejo de rutas, incluyendo rutas protegidas y basadas en roles.
+- **JWT (JSON Web Tokens)**: Autenticación y autorización segura con tokens almacenados en localStorage.
+- **Axios**: Para comunicación con el backend REST.
+- **Estructuras de Datos Personalizadas**: Implementación de listas doblemente enlazadas para navegación entre sesiones de chat.
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+---
+
+## Estructura del Proyecto
+
+```
+/src
+ ├── /components      # Componentes UI reutilizables (botones, badges, inputs, etc.)
+ ├── /contexts        # Contextos React para autenticación y estado global
+ ├── /dataStructures  # Implementación de estructuras como DoublyLinkedList
+ ├── /hooks           # Custom hooks (e.g., para autenticación o fetch de datos)
+ ├── /lib             # Funciones auxiliares para API, tipos y clientes HTTP
+ ├── /pages           # Vistas y páginas principales (Login, Register, Chat, Admin)
+ ├── /styles          # Archivos CSS y configuración Tailwind
+ ├── App.tsx          # Componente raíz con rutas y lógica base
+ ├── main.tsx         # Entrada principal de la app (render React)
+ └── vite.config.ts   # Configuración de Vite
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Características Principales
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+### 1. Autenticación y Autorización
+
+- Registro y login a través de endpoints `/api/auth/register` y `/api/auth/login`.
+- Almacenamiento seguro del JWT en `localStorage`.
+- Contexto React (`AuthContext`) que provee usuario y funciones para login/logout.
+- Rutas protegidas según rol (`USER` y `ADMIN`).
+- Endpoint `/api/auth/me` para obtener la sesión actual del usuario autenticado.
+
+### 2. Chat Médico Asistido por IA
+
+- Listado de sesiones de chat consultado desde `/api/user/chat/sessions`.
+- Visualización de mensajes en la sesión seleccionada (`/api/user/chat/history/{sessionId}`).
+- Envío de mensajes mediante POST a `/api/user/chat/send` con `content` y `sessionId`.
+- Funcionalidad para eliminar sesiones de chat.
+- Uso de lista doblemente enlazada (`DoublyLinkedList`) para navegación entre múltiples sesiones, con flechas para avanzar y retroceder sin perder contexto.
+- Gestión de estados de carga y errores en llamadas API para mejor experiencia UX.
+
+### 3. Panel Administrativo (solo ADMIN)
+
+- Listado y gestión de usuarios mediante endpoints `/api/admin/users` y `/api/admin/users/{id}`.
+- Capacidad para eliminar usuarios directamente desde la UI.
+- Rutas y componentes protegidos para roles administrativos.
+
+---
+
+## Manejo del Estado
+
+- Se utiliza **React Context** para autenticación y estado global del usuario.
+- Los datos de chat y sesiones se manejan con `useState` y `useEffect`.
+- Las listas doblemente enlazadas facilitan la navegación entre sesiones sin necesidad de recargar datos constantemente.
+
+---
+
+## Estilos y Diseño UI
+
+- Uso extensivo de **Tailwind CSS** para estilos rápidos, responsivos y consistentes.
+- Componentes modulares y reutilizables (Botones, TextAreas, Badges, Alerts).
+- Iconografía integrada con librerías como `lucide-react`.
+- Diseño limpio y enfocado en usabilidad para consultas médicas.
+
+---
+
+## Instrucciones para Desarrollo Local
+
+### Requisitos Previos
+
+- Node.js >= 16
+- npm
+- Backend corriendo y accesible (asegúrate que la API REST esté funcionando)
+
+### Pasos para ejecutar
+
+```bash
+# Clonar repositorio y entrar en carpeta
+git clone https://github.com/SantiagoArTyrs/PharmaSync
+cd Frontend
+
+# Instalar dependencias
+npm install
+
+# Iniciar servidor de desarrollo
+npm run dev
 ```
+
+La aplicación quedará disponible típicamente en http://localhost:3000.
+
+---
+
+## Integración con Backend
+
+- Las URLs y configuración base del backend están en `/src/lib/api.ts`.
+- Todas las llamadas HTTP usan Axios con manejo centralizado de tokens JWT para autorización.
+- La autenticación se valida en el contexto global para controlar acceso a rutas y componentes.
+
+---
+
+## Estructura de Datos Destacada
+
+- La implementación de **DoublyLinkedList** permite al usuario navegar fácilmente entre múltiples chats guardados sin recargar todo.
+- Esta lista está integrada con el estado de React para mantener sincronía visual y funcional.
+- Las flechas para navegación usan esta estructura para cambiar el chat actual mostrando el historial respectivo.
+
+---
+
+## Manejo de Errores y Estados de Carga
+
+- Las llamadas API cuentan con manejo de errores para mostrar alertas UI en caso de fallos.
+- Estados de carga (loading) se reflejan en botones e inputs para evitar acciones múltiples.
+- Mensajes de error son claros y orientados al usuario final.
+
+---
+
+## Buenas Prácticas y Recomendaciones
+
+- Mantener el token JWT seguro y renovarlo cuando sea necesario.
+- Controlar el acceso a rutas sensibles en frontend para evitar accesos indebidos.
+- Modularizar componentes para mantener la escalabilidad.
+- Aprovechar el poder de Tailwind para estilos consistentes sin CSS personalizado extensivo.
+
+---

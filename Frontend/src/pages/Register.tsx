@@ -1,64 +1,176 @@
 "use client"
 
-import React, { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
-import { useAuth } from "../contexts/AuthContext"
+import React from "react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { useStepNavigator } from "@/hooks/useStepNavigator"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Link, useNavigate } from "react-router-dom"
+import { useAuth } from "../contexts/AuthContext"
+
+interface StepData {
+  firstName?: string
+  lastName?: string
+  email?: string
+  password?: string
+  confirmPassword?: string
+}
+
+const initialSteps = [
+  { id: "name", title: "Name", description: "Please enter your first and last name" },
+  { id: "email", title: "Email", description: "Enter your email address" },
+  { id: "password", title: "Password", description: "Create a password and confirm it" },
+]
 
 export const Register: React.FC = () => {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  })
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = React.useState<StepData>({})
+  const [error, setError] = React.useState("")
+  const [loading, setLoading] = React.useState(false)
 
   const { register, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
-  // Redirect if already authenticated
   React.useEffect(() => {
     if (isAuthenticated) {
       navigate("/chat", { replace: true })
     }
   }, [isAuthenticated, navigate])
 
+  const { currentStep, hasNext, hasPrevious, nextStep, previousStep } = useStepNavigator(initialSteps)
+
+  const validateStep = (stepId: string, data: StepData) => {
+    switch (stepId) {
+      case "name":
+        return !!data.firstName?.trim() && !!data.lastName?.trim()
+      case "email":
+        return /^\S+@\S+\.\S+$/.test(data.email || "")
+      case "password":
+        return !!data.password && data.password.length >= 6 && data.password === data.confirmPassword
+      default:
+        return false
+    }
+  }
+
+  const isCurrentStepValid = currentStep ? validateStep(currentStep.id, formData) : false
+
+  const handleChange = (field: keyof StepData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    if (error) setError("")
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
-    if (formData.password !== formData.confirmPassword) {
+    if (!isCurrentStepValid) {
+      setError("Please fill out the current step correctly.")
+      return
+    }
+
+    if (currentStep?.id === "password" && formData.password !== formData.confirmPassword) {
       setError("Passwords don't match")
       return
     }
 
-    setLoading(true)
-
-    try {
-      await register({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-      })
-      navigate("/chat")
-    } catch (err) {
-      setError("Registration failed. Please try again.")
-    } finally {
-      setLoading(false)
+    if (hasNext) {
+      nextStep()
+    } else {
+      try {
+        setLoading(true)
+        await register({
+          firstName: formData.firstName!,
+          lastName: formData.lastName!,
+          email: formData.email!,
+          password: formData.password!,
+          confirmPassword: formData.confirmPassword!,
+        })
+        // Registro exitoso, inicio sesión automático
+        navigate("/chat")
+      } catch {
+        setError("Registration failed. Please try again.")
+      } finally {
+        setLoading(false)
+      }
     }
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+  const renderStepContent = () => {
+    if (!currentStep) return null
+
+    switch (currentStep.id) {
+      case "name":
+        return (
+          <>
+            <div>
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                value={formData.firstName || ""}
+                onChange={e => handleChange("firstName", e.target.value)}
+                placeholder="John"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                value={formData.lastName || ""}
+                onChange={e => handleChange("lastName", e.target.value)}
+                placeholder="Doe"
+                required
+              />
+            </div>
+          </>
+        )
+      case "email":
+        return (
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email || ""}
+              onChange={e => handleChange("email", e.target.value)}
+              placeholder="john@example.com"
+              required
+            />
+          </div>
+        )
+      case "password":
+        return (
+          <>
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password || ""}
+                onChange={e => handleChange("password", e.target.value)}
+                placeholder="Enter your password"
+                required
+                minLength={6}
+              />
+            </div>
+            <div>
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={formData.confirmPassword || ""}
+                onChange={e => handleChange("confirmPassword", e.target.value)}
+                placeholder="Confirm your password"
+                required
+                minLength={6}
+              />
+            </div>
+          </>
+        )
+      default:
+        return null
+    }
   }
 
   return (
@@ -76,74 +188,17 @@ export const Register: React.FC = () => {
               </Alert>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
-                <Input
-                  id="firstName"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  required
-                  placeholder="John"
-                />
-              </div>
+            <p className="text-muted-foreground">{currentStep?.description}</p>
+            {renderStepContent()}
 
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  id="lastName"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  required
-                  placeholder="Doe"
-                />
-              </div>
+            <div className="flex justify-between mt-6">
+              <Button variant="outline" onClick={previousStep} disabled={!hasPrevious || loading}>
+                Previous
+              </Button>
+              <Button type="submit" disabled={!isCurrentStepValid || loading}>
+                {hasNext ? "Next" : loading ? "Creating account..." : "Complete"}
+              </Button>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                placeholder="john@example.com"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                placeholder="Enter your password"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                placeholder="Confirm your password"
-              />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating account..." : "Create account"}
-            </Button>
           </form>
 
           <div className="mt-6 text-center">

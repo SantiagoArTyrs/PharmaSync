@@ -117,7 +117,7 @@ docker-compose up -d
 1. Clonar repositorio y entrar en la carpeta frontend.
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/SantiagoArTyrs/PharmaSync.git
 cd frontend
 ```
 

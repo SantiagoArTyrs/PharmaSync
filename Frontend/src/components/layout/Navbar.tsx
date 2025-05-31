@@ -20,6 +20,7 @@ export const Navbar: React.FC = () => {
   const navItems = [
     { path: "/chat", label: "Chat", icon: MessageSquare, protected: true },
     { path: "/summary", label: "Clinical Summary", icon: FileText, protected: true },
+    // Demo removed here
     { path: "/profile", label: "Profile", icon: User, protected: true },
     ...(isAdmin()
       ? [{ path: "/admin/users", label: "Manage Users", icon: Settings, protected: true, adminOnly: true }]

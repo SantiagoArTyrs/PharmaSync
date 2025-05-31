@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { apiClient, type ChatMessage, type ChatSession } from "../lib/api"
 import { Button } from "@/components/ui/button"
@@ -9,43 +8,52 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Bot, User, Send, MessageSquare, Plus } from "lucide-react"
+import { useCarousel } from "../hooks/useCarousel"
+
 
 export const Chat: React.FC = () => {
   const { user } = useAuth()
-  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [sessions, setSessions] = useState<ChatSession[]>([])
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [loading, setLoading] = useState(false)
   const [sessionsLoading, setSessionsLoading] = useState(true)
   const [error, setError] = useState("")
+  const [newSessionCreated, setNewSessionCreated] = useState<ChatSession | null>(null)
 
-  // Load chat sessions on component mount
+  const {
+    currentItem: currentSession,
+    itemCount,
+    next,
+    previous,
+    goTo,
+  } = useCarousel<ChatSession>(sessions)
+
   useEffect(() => {
     loadChatSessions()
   }, [])
 
-  // Load messages when session changes
   useEffect(() => {
-    if (currentSessionId) {
-      loadChatHistory(currentSessionId)
+    if (currentSession) {
+      loadChatHistory(currentSession.sessionId)
     } else {
       setMessages([])
     }
-  }, [currentSessionId])
+  }, [currentSession])
+
+  // Cuando se detecta una nueva sesión creada, la seleccionamos
+  useEffect(() => {
+    if (newSessionCreated) {
+      goTo(newSessionCreated)
+      setNewSessionCreated(null) // Reset para evitar loops
+    }
+  }, [newSessionCreated, goTo])
 
   const loadChatSessions = async () => {
     try {
       setSessionsLoading(true)
       const sessionsData = await apiClient.getChatSessions()
       setSessions(sessionsData)
-      console.log("📦 Sesiones recibidas:", sessionsData)
-
-      // Auto-select the most recent session if available
-        if (sessionsData.length > 0) {
-          // Mantiene la sesión actual si existe, si no, selecciona la más reciente
-          setCurrentSessionId(prev => prev || sessionsData[0].sessionId);
-        }
     } catch (error) {
       console.error("Failed to load chat sessions:", error)
       setError("Failed to load chat sessions")
@@ -59,7 +67,6 @@ export const Chat: React.FC = () => {
       setLoading(true)
       const history = await apiClient.getChatHistory(sessionId)
       setMessages(history?.messages ?? [])
-
     } catch (error) {
       console.error("Failed to load chat history:", error)
       setError("Failed to load chat history")
@@ -68,46 +75,66 @@ export const Chat: React.FC = () => {
     }
   }
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
+  const generateSessionId = () => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    const sessionId = currentSessionId || generateSessionId();
+const handleSendMessage = async () => {
+  if (!newMessage.trim()) return;
 
-    try {
-      setLoading(true);
-      setError("");
+  let sessionId = currentSession?.sessionId;
+  let isNewSession = false;
 
-      // 1. Envía el mensaje al backend y recibe ambos mensajes (usuario + bot)
-      const response = await apiClient.sendMessage({
-        content: newMessage,
+  if (!sessionId) {
+    sessionId = generateSessionId();
+    isNewSession = true;
+  }
+
+  try {
+    setLoading(true);
+    setError("");
+
+    const response = await apiClient.sendMessage({
+      content: newMessage,
+      sessionId,
+    });
+
+    setMessages(prev => [...prev, ...(response ?? [])]);
+
+    if (isNewSession) {
+      const newSession: ChatSession = {
         sessionId,
-      });
-
-      // 2. Agrega ambos mensajes (usuario y bot) al estado
-      setMessages((prev) => [...prev, ...(response ?? [])])
-
-
-      // 3. Si es una sesión nueva, actualiza la lista de sesiones
-      if (!currentSessionId) {
-        setCurrentSessionId(sessionId);
-        await loadChatSessions();
-        
-      }
-
-      // 4. Limpia el campo de entrada
-      setNewMessage("");
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      setError(error instanceof Error ? error.message : "Failed to send message");
-    } finally {
-      setLoading(false);
+        title: newMessage.length > 20 ? newMessage.slice(0, 20) + "..." : newMessage,
+        updatedAt: new Date().toISOString(),
+        messageCount: response?.length ?? 0,
+      };
+      setSessions(prev => [newSession, ...prev]);
+      goTo(newSession);
+    } else {
+      // Actualizar título del chat en sessions localmente si quieres
+      setSessions(prev => prev.map(sess =>
+        sess.sessionId === sessionId ? { ...sess, title: newMessage.length > 20 ? newMessage.slice(0, 20) + "..." : newMessage, updatedAt: new Date().toISOString() } : sess
+      ));
     }
-  };
 
+    setNewMessage("");
+  } catch (error) {
+    console.error("Failed to send message:", error);
+    setError(error instanceof Error ? error.message : "Failed to send message");
+  } finally {
+    setLoading(false);
+  }
+};
 
 
   const handleNewChat = () => {
-    setCurrentSessionId(null)
+    const newSessionId = generateSessionId()
+    const newSession: ChatSession = {
+      sessionId: newSessionId,
+      title: "New Chat",
+      updatedAt: new Date().toISOString(),
+      messageCount: 0,
+    }
+    setSessions(prev => [newSession, ...prev]);
+    setNewSessionCreated(newSession)
     setMessages([])
     setNewMessage("")
   }
@@ -119,22 +146,26 @@ export const Chat: React.FC = () => {
     }
   }
 
-  const generateSessionId = () => {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  }
-
   return (
     <div className="flex h-screen">
       {/* Sidebar with chat sessions */}
-      <div className="w-64 bg-muted/30 border-r border-border">
-        <div className="p-4 border-b border-border">
+      <div className="w-64 bg-muted/30 border-r border-border flex flex-col">
+        <div className="p-4 border-b border-border flex flex-col space-y-2">
           <Button onClick={handleNewChat} className="w-full flex items-center space-x-2">
             <Plus className="h-4 w-4" />
             <span>New Chat</span>
           </Button>
+          <div className="flex justify-between">
+            <Button onClick={previous} disabled={itemCount <= 1} size="sm">
+              Prev
+            </Button>
+            <Button onClick={next} disabled={itemCount <= 1} size="sm">
+              Next
+            </Button>
+          </div>
         </div>
 
-        <div className="p-4">
+        <div className="flex-1 p-4 overflow-y-auto">
           <h3 className="text-sm font-medium text-muted-foreground mb-3">Chat Sessions</h3>
 
           {sessionsLoading ? (
@@ -150,12 +181,12 @@ export const Chat: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-1">
-              {sessions.map((session) => (
+              {sessions.map(session => (
                 <button
                   key={session.sessionId}
-                  onClick={() => setCurrentSessionId(session.sessionId)}
+                  onClick={() => goTo(session)}
                   className={`w-full text-left p-3 rounded-lg transition-colors ${
-                    currentSessionId === session.sessionId
+                    currentSession?.sessionId === session.sessionId
                       ? "bg-primary/10 text-primary"
                       : "hover:bg-muted text-muted-foreground"
                   }`}
@@ -166,7 +197,6 @@ export const Chat: React.FC = () => {
                   </div>
                 </button>
               ))}
-
             </div>
           )}
         </div>
@@ -181,6 +211,7 @@ export const Chat: React.FC = () => {
               <p className="text-sm text-muted-foreground">
                 Welcome, {user?.firstName}! Ask me anything about medications or health information.
               </p>
+              <p className="mt-1 font-medium">{currentSession?.title || "Select a chat session"}</p>
             </div>
             <Badge variant="secondary">Online</Badge>
           </div>
@@ -194,7 +225,6 @@ export const Chat: React.FC = () => {
           </div>
         )}
 
-        {/* Messages area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 && !loading ? (
             <div className="flex items-center justify-center h-full">
@@ -202,8 +232,7 @@ export const Chat: React.FC = () => {
                 <Bot className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-foreground mb-2">Welcome to PharmaSync</h3>
                 <p className="text-muted-foreground max-w-md">
-                  Your AI-powered medical assistant. Ask questions about medications, drug interactions, dosages, and
-                  more.
+                  Your AI-powered medical assistant. Ask questions about medications, drug interactions, dosages, and more.
                 </p>
               </div>
             </div>
@@ -231,11 +260,7 @@ export const Chat: React.FC = () => {
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  <p
-                    className={`text-xs mt-1 ${
-                      message.isUser ? "text-primary-foreground/70" : "text-muted-foreground/70"
-                    }`}
-                  >
+                  <p className={`text-xs mt-1 ${message.isUser ? "text-primary-foreground/70" : "text-muted-foreground/70"}`}>
                     {new Date(message.timestamp).toLocaleTimeString()}
                   </p>
                 </div>
@@ -251,21 +276,14 @@ export const Chat: React.FC = () => {
               <div className="bg-muted rounded-lg px-4 py-2">
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce"></div>
-                  <div
-                    className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.1s" }}
-                  ></div>
-                  <div
-                    className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.2s" }}
-                  ></div>
+                  <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+                  <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Message input */}
         <div className="border-t border-border p-4">
           <div className="flex space-x-2">
             <Textarea

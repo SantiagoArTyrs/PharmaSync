@@ -1,23 +1,40 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import type { ChatSession, ChatMessage } from "../types"
 import { apiClient } from "../lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { MessageSquare, Calendar } from "lucide-react"
+import { MessageSquare, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
+import { useCarousel } from "../hooks/useCarousel"
 
 export const History: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([])
-  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [messagesLoading, setMessagesLoading] = useState(false)
 
+  const {
+    currentItem: selectedSession,
+    currentIndex,
+    itemCount,
+    next,
+    previous,
+    goTo,
+  } = useCarousel<ChatSession>(sessions)
+
   useEffect(() => {
     loadSessions()
   }, [])
+
+  // Cuando cambia la sesión seleccionada, carga mensajes automáticamente
+  useEffect(() => {
+    if (selectedSession) {
+      loadMessages(selectedSession.id)
+    } else {
+      setMessages([])
+    }
+  }, [selectedSession])
 
   const loadSessions = async () => {
     try {
@@ -40,11 +57,6 @@ export const History: React.FC = () => {
     } finally {
       setMessagesLoading(false)
     }
-  }
-
-  const handleSessionClick = (session: ChatSession) => {
-    setSelectedSession(session)
-    loadMessages(session.id)
   }
 
   if (loading) {
@@ -79,12 +91,12 @@ export const History: React.FC = () => {
                 <p className="text-gray-500 text-center py-4">No chat sessions found</p>
               ) : (
                 <div className="space-y-2">
-                  {sessions.map((session) => (
+                  {sessions.map((session, index) => (
                     <Button
                       key={session.id}
                       variant={selectedSession?.id === session.id ? "default" : "outline"}
                       className="w-full justify-start text-left h-auto p-3"
-                      onClick={() => handleSessionClick(session)}
+                      onClick={() => goTo(session)}
                     >
                       <div>
                         <div className="font-medium truncate">{session.title || "Untitled Chat"}</div>
@@ -102,14 +114,24 @@ export const History: React.FC = () => {
         </div>
 
         <div className="lg:col-span-2">
-          <Card className="h-[600px]">
-            <CardHeader>
-              <CardTitle>{selectedSession ? selectedSession.title || "Chat Session" : "Select a Session"}</CardTitle>
-              {selectedSession && (
-                <CardDescription>Created on {new Date(selectedSession.createdAt).toLocaleDateString()}</CardDescription>
-              )}
+          <Card className="h-[600px] flex flex-col">
+            <CardHeader className="flex justify-between items-center">
+              <div>
+                <CardTitle>{selectedSession ? selectedSession.title || "Chat Session" : "Select a Session"}</CardTitle>
+                {selectedSession && (
+                  <CardDescription>Created on {new Date(selectedSession.createdAt).toLocaleDateString()}</CardDescription>
+                )}
+              </div>
+              <div className="space-x-2">
+                <Button variant="outline" size="sm" onClick={previous} disabled={itemCount <= 1}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={next} disabled={itemCount <= 1}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="h-full overflow-y-auto">
+            <CardContent className="h-full overflow-y-auto flex-grow">
               {!selectedSession ? (
                 <div className="flex items-center justify-center h-full text-gray-500">
                   <div className="text-center">

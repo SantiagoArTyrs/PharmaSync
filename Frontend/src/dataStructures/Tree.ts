@@ -22,9 +22,9 @@ export class Tree<T> {
 
     users.forEach((user) => {
       const userAsNodeValue = new GenericTreeNode<User | string>(user.id, user) // Leaf node with user object
-      if (user.roles.includes("ADMIN")) {
+      if (user.role === "ADMIN") {
         adminNode.addChild(userAsNodeValue)
-      } else if (user.roles.includes("USER")) {
+      } else if (user.role === "USER") {
         userNode.addChild(userAsNodeValue)
       }
     })
